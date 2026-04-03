@@ -23,7 +23,6 @@ config/icon="res://icon.svg"
 [autoload]
 
 GameManager="*res://scripts/autoload/game_manager.gd"
-TouchInput="*res://scripts/autoload/touch_input.gd"
 AudioManager="*res://scripts/autoload/audio_manager.gd"
 SaveManager="*res://scripts/autoload/save_manager.gd"
 

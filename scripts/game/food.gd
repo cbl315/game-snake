@@ -1,64 +1,64 @@
 extends Node2D
 
-const FOOD_SCORE = 10
+enum FoodType { APPLE, CHERRY, STAR, SPEED }
 
-var _sprite
-var _grid_position = Vector2.ZERO
+const FOOD_CONFIGS = {
+	FoodType.APPLE: {"score": 10, "grow": 1, "color": Color.RED, "radius": 5.0, "weight": 50},
+	FoodType.CHERRY: {"score": 20, "grow": 2, "color": Color(1.0, 0.4, 0.6), "radius": 6.0, "weight": 25},
+	FoodType.STAR: {"score": 50, "grow": 3, "color": Color(1.0, 0.85, 0.0), "radius": 7.0, "weight": 10},
+	FoodType.SPEED: {"score": 5, "grow": 1, "color": Color(0.3, 0.6, 1.0), "radius": 5.0, "weight": 15},
+}
 
-
-func _ready():
-	_create_sprite()
-	randomize_position()
-
-
-func _create_sprite():
-	_sprite = Sprite2D.new()
-	_sprite.texture = _create_food_texture()
-	_sprite.modulate = Color.RED
-	add_child(_sprite)
+var _food_type = FoodType.APPLE
+var _pulse_timer = 0.0
 
 
-func _create_food_texture():
-	var size = GameManager.GRID_SIZE - 4
-	var image = Image.create(size, size, false, Image.FORMAT_RGBA8)
-	image.fill(Color.TRANSPARENT)
-
-	var center = Vector2.ONE * (size / 2.0)
-	var radius = (size / 2.0) - 1.0
-
-	for x in range(size):
-		for y in range(size):
-			var dist = Vector2(float(x), float(y)).distance_to(center)
-			if dist <= radius:
-				image.set_pixel(x, y, Color.WHITE)
-
-	return ImageTexture.create_from_image(image)
+func setup(pos, food_type = -1):
+	if food_type >= 0:
+		_food_type = food_type
+	else:
+		_randomize_type()
+	position = pos
 
 
-func randomize_position(snake_body = []):
-	var valid_positions = []
-
-	for x in range(GameManager.grid_width):
-		for y in range(GameManager.grid_height):
-			var pos = Vector2(float(x), float(y))
-			if pos not in snake_body:
-				valid_positions.append(pos)
-
-	if valid_positions.is_empty():
-		push_error("No valid positions for food!")
-		return
-
-	_grid_position = valid_positions.pick_random()
-	_update_position()
+func _randomize_type():
+	var total = 0
+	for ft in FOOD_CONFIGS:
+		total += FOOD_CONFIGS[ft]["weight"]
+	var roll = randi() % total
+	var cum = 0
+	for ft in FOOD_CONFIGS:
+		cum += FOOD_CONFIGS[ft]["weight"]
+		if roll < cum:
+			_food_type = ft
+			return
 
 
-func _update_position():
-	position = GameManager.grid_to_world(_grid_position)
+func get_score():
+	return FOOD_CONFIGS[_food_type]["score"]
 
 
-func get_grid_position():
-	return _grid_position
+func get_grow_amount():
+	return FOOD_CONFIGS[_food_type]["grow"]
 
 
-func check_collision(head_pos):
-	return head_pos == _grid_position
+func get_radius():
+	return FOOD_CONFIGS[_food_type]["radius"]
+
+
+func check_collision(head_pos, head_radius):
+	return head_pos.distance_to(position) < head_radius + get_radius()
+
+
+func _process(delta):
+	_pulse_timer += delta * 3.0
+	queue_redraw()
+
+
+func _draw():
+	var config = FOOD_CONFIGS[_food_type]
+	var r = config["radius"] + sin(_pulse_timer) * 1.5
+	# Glow
+	draw_circle(Vector2.ZERO, r + 3.0, Color(config["color"].r, config["color"].g, config["color"].b, 0.25))
+	# Main
+	draw_circle(Vector2.ZERO, r, config["color"])
