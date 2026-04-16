@@ -4,8 +4,8 @@ signal direction_changed(direction)
 
 var _is_pressed = false
 var _knob_pos = Vector2.ZERO
-var _outer_radius = 80.0
-var _inner_radius = 35.0
+var _outer_radius = 100.0
+var _inner_radius = 42.0
 var _touch_index = -1
 var _center = Vector2.ZERO
 
@@ -18,19 +18,23 @@ func _ready():
 
 func _input(event):
 	if event is InputEventScreenTouch:
-		if event.pressed:
+		if event.pressed and _touch_index == -1:
 			if _is_in_area(event.position):
 				_is_pressed = true
 				_touch_index = event.index
 				_update_knob(event.position)
-		elif event.index == _touch_index:
+				get_viewport().set_input_as_handled()
+		elif not event.pressed and event.index == _touch_index:
 			_is_pressed = false
 			_touch_index = -1
 			_knob_pos = _center
 			direction_changed.emit(Vector2.ZERO)
 			queue_redraw()
-	elif event is InputEventScreenDrag and event.index == _touch_index and _is_pressed:
-		_update_knob(event.position)
+			get_viewport().set_input_as_handled()
+	elif event is InputEventScreenDrag:
+		if event.index == _touch_index and _is_pressed:
+			_update_knob(event.position)
+			get_viewport().set_input_as_handled()
 
 
 func _is_in_area(touch_pos):

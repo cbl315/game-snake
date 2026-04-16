@@ -16,6 +16,8 @@ var _hud = null
 var _camera = null
 var _joystick = null
 var _minimap = null
+var _touch_active = false
+var _touch_pos = Vector2.ZERO
 
 
 func _ready():
@@ -168,6 +170,7 @@ func _build_joystick():
 	_joystick.offset_left = 20
 	_joystick.offset_bottom = -30
 	_joystick.custom_minimum_size = Vector2(200, 200)
+	_joystick.size = Vector2(200, 200)
 	_hud.add_child(_joystick)
 
 
@@ -175,12 +178,12 @@ func _build_boost_button():
 	var btn = Button.new()
 	btn.name = "BoostButton"
 	btn.text = "BOOST"
-	btn.add_theme_font_size_override("font_size", 18)
+	btn.add_theme_font_size_override("font_size", 22)
 	btn.modulate.a = 0.7
-	btn.custom_minimum_size = Vector2(90, 90)
+	btn.custom_minimum_size = Vector2(120, 120)
 	btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	btn.offset_right = -25
-	btn.offset_bottom = -25
+	btn.offset_right = -20
+	btn.offset_bottom = -20
 
 	btn.button_down.connect(func(): _boost_button_pressed = true)
 	btn.button_up.connect(func(): _boost_button_pressed = false)
@@ -206,10 +209,19 @@ func _process(delta):
 
 	# Player input
 	if _player and _player.is_alive():
+		var dir = Vector2.ZERO
 		if _joystick:
-			var dir = _joystick.get_direction()
-			if dir != Vector2.ZERO:
-				_player.set_direction(dir)
+			dir = _joystick.get_direction()
+
+		# Touch fallback: drag on screen to steer
+		if dir == Vector2.ZERO and _touch_active:
+			var screen_center = get_viewport().get_visible_rect().size / 2.0
+			var touch_offset = _touch_pos - screen_center
+			if touch_offset.length() > 15.0:
+				dir = touch_offset.normalized()
+
+		if dir != Vector2.ZERO:
+			_player.set_direction(dir)
 		_player.set_boost(_boost_button_pressed or Input.is_key_pressed(KEY_SHIFT))
 
 	# Camera follow
@@ -495,6 +507,16 @@ func _on_restart():
 func _input(event):
 	if GameManager.current_state != GameManager.GameState.PLAYING:
 		return
+
+	# Track touch position for mobile control
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			_touch_active = true
+			_touch_pos = event.position
+		else:
+			_touch_active = false
+	elif event is InputEventScreenDrag:
+		_touch_pos = event.position
 
 	if not _player or not _player.is_alive():
 		return
